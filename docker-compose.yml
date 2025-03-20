@@ -1,0 +1,52 @@
+services:
+  database-app:
+    image: postgres:15
+    container_name: nestjs-base-database-app
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - '5445:5432'
+    volumes:
+      - nestjs-database-app:/var/lib/postgresql/data
+  database-keycloak:
+    image: postgres:15
+    container_name: nestjs-base-database-keycloak
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    volumes:
+      - nestjs-database-keycloak:/var/lib/postgresql/data
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.2
+    container_name: keycloak
+    env_file:
+      - ./.env
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://database-keycloak:5432/postgres
+      - KC_DB_USERNAME=admin
+      - KC_DB_PASSWORD=password
+      - KC_FEATURES=scripts
+      - KEYCLOAK_FEATURES=upload_scripts,scripts
+      - KEYCLOAK_LOGLEVEL=DEBUG
+      - KEYCLOAK_ROOT_LOGLEVEL=DEBUG
+      - KC_HEALTH_ENABLED=true
+    ports:
+      - '8080:8080'
+    command: start-dev
+    depends_on:
+      - database-keycloak
+    healthcheck:
+      test:
+        ['CMD', 'curl', '--head', 'fsS', 'http://localhost:9000/health/ready']
+      interval: 5s
+      timeout: 2s
+      retries: 15
+volumes:
+  nestjs-database-app:
+  nestjs-database-keycloak:
